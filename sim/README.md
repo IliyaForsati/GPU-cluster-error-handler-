@@ -72,4 +72,14 @@ see step 2): open Discover and look for the `fake-node-logs` and
 occasional CUDA OOM / NCCL timeout / XID lines, and gauge/counter
 metrics for 8 GPUs per node.
 
+## 4. Dummy fake-vLLM workload
+
+```
+docker build -t fake-vllm:local fake-vllm/
+kind load docker-image fake-vllm:local --name gpu-sim
+
+kubectl apply -f k8s/fleet/fake-vllm-deployment.yaml
+kubectl -n gpu-sim get pods -l app=fake-vllm   # expect 1 Running pod
+```
+
 (Further steps — KubeAI — are added below as they are built.)

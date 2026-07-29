@@ -1,0 +1,59 @@
+# Dummy model-serving workload (demo.md section 5: KubeAI manages
+# replica autoscaling). Labels/probes match what a real vLLM Deployment
+# would have, so KubeAI's autoscaler has a normal-looking target even
+# though no real model or GPU is behind it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fake-vllm
+  namespace: gpu-sim
+  labels:
+    app: fake-vllm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fake-vllm
+  template:
+    metadata:
+      labels:
+        app: fake-vllm
+    spec:
+      containers:
+        - name: fake-vllm
+          image: fake-vllm:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 2
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: "0.05"
+            limits:
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fake-vllm
+  namespace: gpu-sim
+  labels:
+    app: fake-vllm
+spec:
+  selector:
+    app: fake-vllm
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
