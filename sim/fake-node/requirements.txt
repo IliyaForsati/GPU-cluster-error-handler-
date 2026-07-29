@@ -1,0 +1,2 @@
+# generator.py only uses the Python standard library, on purpose -
+# keeps the image tiny across 8 pods running at once.
