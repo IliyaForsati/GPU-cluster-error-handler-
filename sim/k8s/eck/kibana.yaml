@@ -1,0 +1,24 @@
+# Kibana as a UI only, for browsing what the fake fleet ships into
+# Elasticsearch (Discover / Dashboards). No alert rules here on purpose -
+# Kibana Alerting is the next planning stage (demo.md section 4.2),
+# once these fake logs/metrics are proven realistic enough to alert on.
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: gpu-sim-kibana
+  namespace: gpu-sim
+spec:
+  version: 8.15.0
+  count: 1
+  elasticsearchRef:
+    name: gpu-sim-es
+  podTemplate:
+    spec:
+      containers:
+        - name: kibana
+          resources:
+            requests:
+              memory: 1Gi
+              cpu: "0.3"
+            limits:
+              memory: 1Gi

@@ -1,0 +1,35 @@
+# 3-node Elasticsearch, matching demo.md section 4.1 (the correlation
+# store for both logs and hardware metrics). One nodeSet, count 3, so
+# all 3 pods do both master and data duty - fine for a local simulation,
+# a real deployment would split master/data/ingest roles.
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: gpu-sim-es
+  namespace: gpu-sim
+spec:
+  version: 8.15.0
+  nodeSets:
+    - name: default
+      count: 3
+      config:
+        node.store.allow_mmap: false
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                requests:
+                  memory: 2Gi
+                  cpu: "0.5"
+                limits:
+                  memory: 2Gi
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi

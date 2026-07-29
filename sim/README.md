@@ -24,5 +24,27 @@ Tear down:
 kind delete cluster --name gpu-sim
 ```
 
-(Further steps — Elasticsearch, the fake-node fleet, KubeAI — are added
-below as they are built.)
+## 2. Elasticsearch (3 nodes) + Kibana, via ECK
+
+Requires the [ECK operator](https://www.elastic.co/guide/en/cloud-on-k8s/current/index.html)
+(installed once per cluster) and Helm is not needed for this part.
+
+```
+kubectl apply -f k8s/namespace.yaml
+bash k8s/eck/install-eck-operator.sh          # one-time: installs ECK CRDs + operator
+kubectl apply -f k8s/eck/elasticsearch.yaml    # 3-node Elasticsearch
+kubectl apply -f k8s/eck/kibana.yaml           # Kibana UI (no alert rules yet)
+
+kubectl -n gpu-sim get elasticsearch,kibana    # wait for phase: Ready
+```
+
+Get the auto-generated `elastic` user password and open Kibana:
+
+```
+kubectl -n gpu-sim get secret gpu-sim-es-es-elastic-user -o go-template='{{.data.elastic | base64decode}}'
+kubectl -n gpu-sim port-forward service/gpu-sim-kibana-kb-http 5601
+# then open https://localhost:5601 (user: elastic)
+```
+
+(Further steps — the fake-node fleet, KubeAI — are added below as they
+are built.)
