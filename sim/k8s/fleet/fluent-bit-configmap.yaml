@@ -1,0 +1,57 @@
+# Fluent Bit config for the sidecar in each fake-node pod. This plays
+# the same role as the real Fluent Bit agent in demo.md section 3:
+# ship container logs to Elasticsearch. The only difference from a
+# real deployment is the INPUT source (a shared log file instead of
+# hostPath /var/log/containers), because these are fake logs written
+# by our own generator, not a real container runtime's log driver.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: gpu-sim
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush        1
+        Daemon       Off
+        Log_Level    info
+
+    [INPUT]
+        Name         tail
+        Path         /var/log/fake-node/generator.log
+        Tag          fake_node.logs
+        Read_from_Head true
+
+    # DCGM-shaped metrics are exposed on localhost, since Fluent Bit
+    # shares the pod's network namespace with the generator container.
+    [INPUT]
+        Name         prometheus_scrape
+        Host         localhost
+        Port         9400
+        Metrics_Path /metrics
+        Scrape_Interval 15s
+        Tag          fake_node.metrics
+
+    [OUTPUT]
+        Name         es
+        Match        fake_node.logs
+        Host         gpu-sim-es-es-http
+        Port         9200
+        HTTP_User    elastic
+        HTTP_Passwd  ${ES_PASSWORD}
+        tls          On
+        tls.verify   Off
+        Index        fake-node-logs
+        Suppress_Type_Name On
+
+    [OUTPUT]
+        Name         es
+        Match        fake_node.metrics
+        Host         gpu-sim-es-es-http
+        Port         9200
+        HTTP_User    elastic
+        HTTP_Passwd  ${ES_PASSWORD}
+        tls          On
+        tls.verify   Off
+        Index        fake-node-metrics
+        Suppress_Type_Name On

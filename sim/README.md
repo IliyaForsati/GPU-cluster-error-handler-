@@ -46,5 +46,30 @@ kubectl -n gpu-sim port-forward service/gpu-sim-kibana-kb-http 5601
 # then open https://localhost:5601 (user: elastic)
 ```
 
-(Further steps — the fake-node fleet, KubeAI — are added below as they
-are built.)
+## 3. The fake-node fleet (8 nodes, 8 fake GPUs each)
+
+Build the generator image and load it into the kind cluster (kind
+nodes don't see your local Docker registry by default):
+
+```
+docker build -t fake-node-generator:local fake-node/
+kind load docker-image fake-node-generator:local --name gpu-sim
+```
+
+Then deploy the DaemonSet (1 pod per gpu-worker node, so 8 pods total)
+and its Fluent Bit sidecar config:
+
+```
+kubectl apply -f k8s/fleet/fluent-bit-configmap.yaml
+kubectl apply -f k8s/fleet/fake-node-daemonset.yaml
+
+kubectl -n gpu-sim get pods -l app=fake-node   # expect 8 Running pods
+```
+
+Check data is landing in Elasticsearch (after port-forwarding Kibana,
+see step 2): open Discover and look for the `fake-node-logs` and
+`fake-node-metrics` indices. You should see normal request logs plus
+occasional CUDA OOM / NCCL timeout / XID lines, and gauge/counter
+metrics for 8 GPUs per node.
+
+(Further steps — KubeAI — are added below as they are built.)

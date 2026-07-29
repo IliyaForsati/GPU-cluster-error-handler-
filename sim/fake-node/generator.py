@@ -15,13 +15,29 @@ alert rules against, since the real cluster is not available.
 """
 import os
 import random
+import re
 import sys
 import threading
 import time
 import traceback
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-NODE_INDEX = os.environ.get("NODE_INDEX", "0")
+
+def _default_node_index():
+    """Derive a node index from the kind node name when NODE_INDEX is
+    not set explicitly (the DaemonSet uses one shared pod template for
+    all 8 nodes, so it can't pass a different literal env var to each).
+    kind names workers "<cluster>-worker", "<cluster>-worker2", ...,
+    matching the node-index labels set in sim/kind-cluster.yaml.
+    """
+    node_name = os.environ.get("NODE_NAME", "")
+    match = re.search(r"worker(\d*)$", node_name)
+    if not match:
+        return "0"
+    return match.group(1) or "1"
+
+
+NODE_INDEX = os.environ.get("NODE_INDEX") or _default_node_index()
 GPU_COUNT = int(os.environ.get("GPU_COUNT", "8"))
 METRICS_PORT = int(os.environ.get("METRICS_PORT", "9400"))
 # Chance, per GPU per log tick, that we emit a fault line instead of a
@@ -162,7 +178,32 @@ def ts():
     return time.strftime("%Y-%m-%dT%H:%M:%S%z")
 
 
+class Tee:
+    """Duplicates writes to real stdout and a log file.
+
+    The Fluent Bit sidecar in the same pod tails LOG_FILE (a shared
+    emptyDir volume) instead of container stdout, since two containers
+    in one pod don't share a filesystem by default - only a mounted
+    volume does.
+    """
+
+    def __init__(self, *streams):
+        self.streams = streams
+
+    def write(self, data):
+        for s in self.streams:
+            s.write(data)
+
+    def flush(self):
+        for s in self.streams:
+            s.flush()
+
+
 def main():
+    log_file = os.environ.get("LOG_FILE")
+    if log_file:
+        sys.stdout = Tee(sys.stdout, open(log_file, "a"))
+
     threading.Thread(target=serve_metrics, daemon=True).start()
     threading.Thread(target=drift_metrics, daemon=True).start()
 
