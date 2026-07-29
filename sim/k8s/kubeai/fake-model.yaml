@@ -1,0 +1,26 @@
+# KubeAI manages workloads through its own Model custom resource
+# (it creates the Deployment itself, rather than adopting one you wrote -
+# see fake-vllm-deployment.yaml, which is the plain Deployment used for
+# manual testing before this CR is applied).
+#
+# This CR points KubeAI at the same fake-vllm image so it has a real,
+# if fake, target to scale between minReplicas and maxReplicas -
+# mirroring demo.md section 5 (KubeAI's floor/ceiling autoscaling).
+#
+# NOTE: the exact fields on this CRD depend on the installed KubeAI
+# version. Check `kubectl explain model.spec` after installing KubeAI
+# and adjust field names here if they differ - this file was written
+# without a live KubeAI install to verify against.
+apiVersion: kubeai.org/v1
+kind: Model
+metadata:
+  name: fake-vllm
+  namespace: gpu-sim
+spec:
+  image: fake-vllm:local
+  minReplicas: 1
+  maxReplicas: 4
+  targetRequests: 20 # scale up once average pending requests per replica passes this
+  args: ["python", "app.py"]
+  env:
+    PORT: "8000"

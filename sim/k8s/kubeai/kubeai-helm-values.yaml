@@ -1,0 +1,19 @@
+# Values for `helm install kubeai kubeai/kubeai -f kubeai-helm-values.yaml`.
+# Trimmed down for a laptop: KubeAI normally expects a Prometheus stack
+# and real GPU nodes to be present; neither exists in this simulation,
+# so the pieces that need them are turned off here.
+open-webui:
+  enabled: false
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+
+# No real Prometheus is deployed in this simulation stage (out of scope -
+# demo.md section 4.1 notes Prometheus feeds autoscaling signals, but
+# wiring that up is future work once the fake metrics prove realistic).
+metrics:
+  prometheusOperator: false

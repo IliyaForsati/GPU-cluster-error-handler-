@@ -82,4 +82,32 @@ kubectl apply -f k8s/fleet/fake-vllm-deployment.yaml
 kubectl -n gpu-sim get pods -l app=fake-vllm   # expect 1 Running pod
 ```
 
-(Further steps — KubeAI — are added below as they are built.)
+## 5. KubeAI
+
+```
+helm repo add kubeai https://www.kubeai.org
+helm repo update
+helm install kubeai kubeai/kubeai -n gpu-sim -f k8s/kubeai/kubeai-helm-values.yaml --wait
+
+kubectl -n gpu-sim get pods -l app.kubernetes.io/name=kubeai
+```
+
+Then let KubeAI manage the fake workload instead of the plain
+Deployment from step 4:
+
+```
+kubectl delete -f k8s/fleet/fake-vllm-deployment.yaml
+kubectl apply -f k8s/kubeai/fake-model.yaml
+kubectl -n gpu-sim get model fake-vllm
+```
+
+Note: `fake-model.yaml` was written without a live KubeAI install to
+check field names against - if `kubectl apply` rejects it, run
+`kubectl explain model.spec` (after KubeAI is installed) and adjust the
+field names to match the version you installed.
+
+## What this simulation does NOT include
+
+Kibana Alerting rules, the advisory LLM, and StackStorm - see
+`../demo.md` sections 4.2-4.4. Those are the next stage, once this
+simulation is proven to produce realistic-enough logs and metrics.
