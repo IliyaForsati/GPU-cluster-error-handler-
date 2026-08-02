@@ -15,15 +15,27 @@ on machines with less CPU/RAM free.
 
 Requires [kind](https://kind.sigs.k8s.io/) and Docker.
 
+If your host uses an HTTP/SOCKS proxy (e.g. v2ray), use the wrapper script -
+kind copies your host's proxy address into every node, but that address
+(usually `127.0.0.1:PORT`) is wrong inside a container, and normally has to
+be fixed by hand after every single recreate. `scripts/up.sh` fixes this
+automatically by pointing every node at a small relay container
+(`kind-proxy-relay`) that forwards to your host proxy - see
+`scripts/setup-proxy-relay.sh` and `scripts/fix-node-proxy.sh` for how:
+
 ```
-kind create cluster --config kind-cluster.yaml --name gpu-sim
+bash scripts/up.sh
 kubectl get nodes --show-labels   # confirms 4 nodes with node-role=gpu-worker
 ```
+
+If you don't use a proxy, plain `kind create cluster --config
+kind-cluster.yaml --name gpu-sim` works the same way.
 
 Tear down:
 
 ```
 kind delete cluster --name gpu-sim
+docker rm -f kind-proxy-relay   # only if you used scripts/up.sh
 ```
 
 ## 2. Elasticsearch (3 nodes) + Kibana, via ECK
