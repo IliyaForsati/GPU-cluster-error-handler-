@@ -27,7 +27,12 @@ def drift_queue_depth():
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path in ("/healthz", "/readyz"):
+        # /health is what KubeAI's Model CR probes on (see
+        # vllm/entrypoints/openai/api_server.py) - real vLLM uses that
+        # path, so this fake server answers on it too, alongside the
+        # /healthz + /readyz pair used by the plain Deployment in
+        # k8s/fleet/fake-vllm-deployment.yaml.
+        if self.path in ("/healthz", "/readyz", "/health"):
             self._respond(200, b"ok")
         elif self.path == "/metrics":
             body = (
@@ -50,8 +55,12 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
 
-if __name__ == "__main__":
+def main():
     import threading
 
     threading.Thread(target=drift_queue_depth, daemon=True).start()
     HTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
+
+
+if __name__ == "__main__":
+    main()

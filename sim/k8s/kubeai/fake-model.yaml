@@ -7,20 +7,29 @@
 # if fake, target to scale between minReplicas and maxReplicas -
 # mirroring demo.md section 5 (KubeAI's floor/ceiling autoscaling).
 #
-# NOTE: the exact fields on this CRD depend on the installed KubeAI
-# version. Check `kubectl explain model.spec` after installing KubeAI
-# and adjust field names here if they differ - this file was written
-# without a live KubeAI install to verify against.
+# Verified against a live KubeAI install (`kubectl explain model.spec`).
+# engine/features/url/scaleDownDelaySeconds are all required by the CRD
+# even though our fake server ignores them (see fake-vllm/app.py) - VLLM
+# and a plausible-looking hf:// url are used just to satisfy validation
+# and stay close to what a real vLLM Model would look like.
 apiVersion: kubeai.org/v1
 kind: Model
 metadata:
   name: fake-vllm
   namespace: gpu-sim
 spec:
+  engine: VLLM
+  features: ["TextGeneration"]
+  url: "hf://fake-org/fake-vllm"
   image: fake-vllm:local
+  # Required even on CPU-only, no-GPU setups like this one - KubeAI's
+  # controller rejects the Model without it ("invalid resource profile"),
+  # it's not just a hint. "cpu" is the only profile the Helm values define
+  # without a real GPU.
+  resourceProfile: "cpu:1"
   minReplicas: 1
   maxReplicas: 4
   targetRequests: 20 # scale up once average pending requests per replica passes this
-  args: ["python", "app.py"]
+  scaleDownDelaySeconds: 30
   env:
     PORT: "8000"
