@@ -15,5 +15,11 @@ resources:
 # No real Prometheus is deployed in this simulation stage (out of scope -
 # demo.md section 4.1 notes Prometheus feeds autoscaling signals, but
 # wiring that up is future work once the fake metrics prove realistic).
+# Nested under vLLMPodMonitor.enabled, not a plain bool - the chart's
+# vllm-pod-monitor.yaml template reads that exact path and errors out
+# ("can't evaluate field vLLMPodMonitor in type interface {}") if this is
+# flattened to `prometheusOperator: false` instead.
 metrics:
-  prometheusOperator: false
+  prometheusOperator:
+    vLLMPodMonitor:
+      enabled: false
