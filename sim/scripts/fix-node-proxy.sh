@@ -22,13 +22,17 @@ for node in $(kind get nodes --name "$CLUSTER_NAME"); do
     "s#https?://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:10808#${PROXY_URL}#g" \
     /etc/systemd/system.conf.d/proxy-default-environment.conf
 
-  # Only the control-plane node has these manifests.
+  # Only the control-plane node has these manifests. Worker nodes make the
+  # "[ -f "$f" ]" check fail on every file, and since that failure would be
+  # the last command's exit status, it would kill this whole script under
+  # "set -e" in the caller - so this inner shell always ends on "exit 0".
   docker exec "$node" sh -c '
     for f in /etc/kubernetes/manifests/kube-apiserver.yaml \
              /etc/kubernetes/manifests/kube-controller-manager.yaml \
              /etc/kubernetes/manifests/kube-scheduler.yaml; do
       [ -f "$f" ] && sed -i -E "s#https?://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:10808#'"${PROXY_URL}"'#g" "$f"
     done
+    exit 0
   '
 
   docker exec "$node" systemctl daemon-reload
