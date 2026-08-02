@@ -1,13 +1,13 @@
-# Local stand-in for the 32-node fleet in demo.md, scaled down to 8 nodes
-# so it fits on a laptop. Each "node" below is a real Docker container
-# acting as one physical worker machine.
+# Local stand-in for the 32-node fleet in demo.md, scaled down to 4 worker
+# nodes + 1 control-plane so it fits on a smaller laptop. Each "node" below
+# is a real Docker container acting as one physical machine.
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
   - role: control-plane
 
   # node-index labels let the fake-node generator (sim/fake-node) know
-  # which of the 8 simulated physical nodes it is running on.
+  # which of the 4 simulated physical nodes it is running on.
   - role: worker
     kubeadmConfigPatches:
       - |
@@ -36,31 +36,3 @@ nodes:
         nodeRegistration:
           kubeletExtraArgs:
             node-labels: "node-role=gpu-worker,node-index=4"
-  - role: worker
-    kubeadmConfigPatches:
-      - |
-        kind: JoinConfiguration
-        nodeRegistration:
-          kubeletExtraArgs:
-            node-labels: "node-role=gpu-worker,node-index=5"
-  - role: worker
-    kubeadmConfigPatches:
-      - |
-        kind: JoinConfiguration
-        nodeRegistration:
-          kubeletExtraArgs:
-            node-labels: "node-role=gpu-worker,node-index=6"
-  - role: worker
-    kubeadmConfigPatches:
-      - |
-        kind: JoinConfiguration
-        nodeRegistration:
-          kubeletExtraArgs:
-            node-labels: "node-role=gpu-worker,node-index=7"
-  - role: worker
-    kubeadmConfigPatches:
-      - |
-        kind: JoinConfiguration
-        nodeRegistration:
-          kubeletExtraArgs:
-            node-labels: "node-role=gpu-worker,node-index=8"

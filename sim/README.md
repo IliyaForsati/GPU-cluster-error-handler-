@@ -6,8 +6,10 @@ tested without access to the real 32-node cluster. It does NOT include the
 error-handling part itself — see `../demo.md` section 4.2-4.4 for what is
 still missing.
 
-Scaled down from the real cluster: 8 fake worker nodes (instead of 32),
-each simulating 8 fake H200 GPUs.
+Scaled down from the real cluster: 4 fake worker nodes + 1 control-plane
+node (instead of 32 workers), each worker simulating 8 fake H200 GPUs.
+This is a smaller footprint than the original 8-node simulation, to fit
+on machines with less CPU/RAM free.
 
 ## 1. Bring up the local Kubernetes cluster
 
@@ -15,7 +17,7 @@ Requires [kind](https://kind.sigs.k8s.io/) and Docker.
 
 ```
 kind create cluster --config kind-cluster.yaml --name gpu-sim
-kubectl get nodes --show-labels   # confirms 8 nodes with node-role=gpu-worker
+kubectl get nodes --show-labels   # confirms 4 nodes with node-role=gpu-worker
 ```
 
 Tear down:
@@ -46,7 +48,7 @@ kubectl -n gpu-sim port-forward service/gpu-sim-kibana-kb-http 5601
 # then open https://localhost:5601 (user: elastic)
 ```
 
-## 3. The fake-node fleet (8 nodes, 8 fake GPUs each)
+## 3. The fake-node fleet (4 nodes, 8 fake GPUs each)
 
 Build the generator image and load it into the kind cluster (kind
 nodes don't see your local Docker registry by default):
@@ -56,14 +58,14 @@ docker build -t fake-node-generator:local fake-node/
 kind load docker-image fake-node-generator:local --name gpu-sim
 ```
 
-Then deploy the DaemonSet (1 pod per gpu-worker node, so 8 pods total)
+Then deploy the DaemonSet (1 pod per gpu-worker node, so 4 pods total)
 and its Fluent Bit sidecar config:
 
 ```
 kubectl apply -f k8s/fleet/fluent-bit-configmap.yaml
 kubectl apply -f k8s/fleet/fake-node-daemonset.yaml
 
-kubectl -n gpu-sim get pods -l app=fake-node   # expect 8 Running pods
+kubectl -n gpu-sim get pods -l app=fake-node   # expect 4 Running pods
 ```
 
 Check data is landing in Elasticsearch (after port-forwarding Kibana,

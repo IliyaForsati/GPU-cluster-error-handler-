@@ -26,7 +26,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 def _default_node_index():
     """Derive a node index from the kind node name when NODE_INDEX is
     not set explicitly (the DaemonSet uses one shared pod template for
-    all 8 nodes, so it can't pass a different literal env var to each).
+    all 4 nodes, so it can't pass a different literal env var to each).
     kind names workers "<cluster>-worker", "<cluster>-worker2", ...,
     matching the node-index labels set in sim/kind-cluster.yaml.
     """

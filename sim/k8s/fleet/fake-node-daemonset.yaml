@@ -1,4 +1,4 @@
-# One pod per gpu-worker node (8 total), each simulating one physical
+# One pod per gpu-worker node (4 total), each simulating one physical
 # machine from demo.md: a generator container faking 8 H200 GPUs, and
 # a Fluent Bit sidecar shipping its logs/metrics to Elasticsearch -
 # mirroring the real per-node telemetry DaemonSet in demo.md section 3.
@@ -18,7 +18,7 @@ spec:
       labels:
         app: fake-node
     spec:
-      # Only schedule on the 8 nodes standing in for GPU workers, not
+      # Only schedule on the 4 nodes standing in for GPU workers, not
       # on the kind control-plane node.
       nodeSelector:
         node-role: gpu-worker
