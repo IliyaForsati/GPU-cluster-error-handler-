@@ -12,6 +12,19 @@ spec:
   count: 1
   elasticsearchRef:
     name: gpu-sim-es
+  # NodePort (fixed at 30561) instead of the default ClusterIP, so kind's
+  # extraPortMappings (kind-cluster.yaml) can map it straight through to
+  # localhost:5601 - no port-forward needed after up.sh.
+  http:
+    service:
+      spec:
+        type: NodePort
+        # Same requirement as elasticsearch.yaml: keep the "https" port
+        # name ECK expects, don't just override port/nodePort.
+        ports:
+          - name: https
+            port: 5601
+            nodePort: 30561
   podTemplate:
     spec:
       containers:

@@ -9,6 +9,21 @@ metadata:
   namespace: gpu-sim
 spec:
   version: 8.15.0
+  # NodePort (fixed at 30920) instead of the default ClusterIP, so kind's
+  # extraPortMappings (kind-cluster.yaml) can map it straight through to
+  # localhost:9200 - no port-forward needed after up.sh.
+  http:
+    service:
+      spec:
+        type: NodePort
+        # name: https is required - ECK's own Kibana<->Elasticsearch
+        # wiring looks up this service's port *by that name*
+        # ("no port named [https] in service..." if it's missing), not
+        # just by number.
+        ports:
+          - name: https
+            port: 9200
+            nodePort: 30920
   nodeSets:
     - name: default
       count: 3

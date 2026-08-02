@@ -4,7 +4,21 @@
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
+  # extraPortMappings expose Elasticsearch and Kibana straight on
+  # localhost, instead of needing `kubectl port-forward` after every
+  # up.sh run. The container ports here (30920/30561) must match the
+  # NodePort values set in k8s/eck/elasticsearch.yaml and kibana.yaml -
+  # kind can only map a host port to a fixed container port, and
+  # NodePort is the only Service type that binds to a fixed port on
+  # every node.
   - role: control-plane
+    extraPortMappings:
+      - containerPort: 30920
+        hostPort: 9200
+        protocol: TCP
+      - containerPort: 30561
+        hostPort: 5601
+        protocol: TCP
 
   # node-index labels let the fake-node generator (sim/fake-node) know
   # which of the 4 simulated physical nodes it is running on.
