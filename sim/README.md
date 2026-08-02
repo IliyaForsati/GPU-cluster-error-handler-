@@ -11,6 +11,17 @@ node (instead of 32 workers), each worker simulating 8 fake H200 GPUs.
 This is a smaller footprint than the original 8-node simulation, to fit
 on machines with less CPU/RAM free.
 
+## Quick start
+
+```
+bash up.sh    # brings up everything: cluster, ES/Kibana, fake nodes, KubeAI
+bash down.sh  # tears it all back down
+```
+
+Both are safe to re-run. The sections below explain what each step does
+and how to run them one at a time, e.g. to iterate on a single piece
+without rebuilding everything.
+
 ## 1. Bring up the local Kubernetes cluster
 
 Requires [kind](https://kind.sigs.k8s.io/) and Docker.
