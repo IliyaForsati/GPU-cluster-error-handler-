@@ -115,10 +115,9 @@ kubectl apply -f k8s/kubeai/fake-model.yaml
 kubectl -n gpu-sim get model fake-vllm
 ```
 
-Note: `fake-model.yaml` was written without a live KubeAI install to
-check field names against - if `kubectl apply` rejects it, run
-`kubectl explain model.spec` (after KubeAI is installed) and adjust the
-field names to match the version you installed.
+Verified against a live KubeAI install: `kubectl -n gpu-sim get pods
+-l model.kubeai.org/name=fake-vllm` should show one `Running` pod once
+the Model is reconciled (a few seconds after apply).
 
 ## What this simulation does NOT include
 
