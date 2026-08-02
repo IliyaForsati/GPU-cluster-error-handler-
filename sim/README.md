@@ -63,13 +63,17 @@ kubectl apply -f k8s/eck/kibana.yaml           # Kibana UI (no alert rules yet)
 kubectl -n gpu-sim get elasticsearch,kibana    # wait for phase: Ready
 ```
 
-Get the auto-generated `elastic` user password and open Kibana:
+Both are already reachable directly on localhost - no port-forward needed -
+because `kind-cluster.yaml` maps host ports 9200/5601 straight to the
+NodePort Services set in elasticsearch.yaml/kibana.yaml. Get the
+auto-generated `elastic` user password and open Kibana:
 
 ```
 kubectl -n gpu-sim get secret gpu-sim-es-es-elastic-user -o go-template='{{.data.elastic | base64decode}}'
-kubectl -n gpu-sim port-forward service/gpu-sim-kibana-kb-http 5601
-# then open https://localhost:5601 (user: elastic)
+# then open https://localhost:5601 (user: elastic) or curl https://localhost:9200
 ```
+
+(`up.sh` prints this password automatically at the end of the run.)
 
 ## 3. The fake-node fleet (4 nodes, 8 fake GPUs each)
 
