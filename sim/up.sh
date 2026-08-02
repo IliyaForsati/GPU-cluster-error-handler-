@@ -20,6 +20,17 @@ export no_proxy="${no_proxy:-127.0.0.1,localhost}"
 echo "=== 1/5: kind cluster + proxy relay ==="
 bash "$SIM_DIR/scripts/up.sh" "$CLUSTER_NAME"
 
+# The API server is still stabilizing right after node join - RBAC and
+# the OpenAPI schema aren't always ready yet, so even `kubectl wait`
+# itself can fail with transient errors (EOF, "unknown", Forbidden).
+# A single wait isn't enough; retry until a real kubectl call succeeds.
+echo "Waiting for the API server to settle..."
+for i in $(seq 1 30); do
+  kubectl get nodes >/dev/null 2>&1 && break
+  sleep 3
+done
+kubectl wait --for=condition=Ready nodes --all --timeout=120s >/dev/null
+
 echo "=== 2/5: Elasticsearch + Kibana ==="
 kubectl apply -f "$SIM_DIR/k8s/namespace.yaml"
 bash "$SIM_DIR/k8s/eck/install-eck-operator.sh"
@@ -56,3 +67,11 @@ echo "Done. Everything is up:"
 kubectl get nodes
 kubectl -n gpu-sim get elasticsearch,kibana,pods -l app=fake-node
 kubectl -n gpu-sim get model fake-vllm
+
+# The elastic user's password is auto-generated fresh by ECK on every
+# Elasticsearch create, so it's different every time up.sh is run -
+# printing it here saves having to know/remember the get-secret command.
+ELASTIC_PASSWORD="$(kubectl -n gpu-sim get secret gpu-sim-es-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')"
+echo
+echo "Elasticsearch: https://localhost:9200  (user: elastic, password: ${ELASTIC_PASSWORD})"
+echo "Kibana:        https://localhost:5601  (user: elastic, password: ${ELASTIC_PASSWORD})"
