@@ -5,9 +5,25 @@
 set -euo pipefail
 
 ECK_VERSION="2.14.0"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-kubectl create -f "https://download.elastic.co/downloads/eck/${ECK_VERSION}/crds.yaml"
-kubectl apply -f "https://download.elastic.co/downloads/eck/${ECK_VERSION}/operator.yaml"
+# On a server with no outbound internet at all, drop the same two files
+# Elastic publishes into vendor/ (untracked - see .gitignore) and this
+# picks them up instead of trying to fetch them. Still fetches straight
+# from Elastic by default everywhere else, so nothing here can go stale.
+CRDS_FILE="$SCRIPT_DIR/vendor/crds.yaml"
+OPERATOR_FILE="$SCRIPT_DIR/vendor/operator.yaml"
+
+if [ -f "$CRDS_FILE" ] && [ -f "$OPERATOR_FILE" ]; then
+  kubectl create -f "$CRDS_FILE"
+  kubectl apply -f "$OPERATOR_FILE"
+else
+  # Bounded so a machine with no internet route to Elastic's CDN fails
+  # fast and loud instead of kubectl hanging on the URL fetch - drop the
+  # two files into vendor/ (see above) to avoid this fetch entirely.
+  timeout 30 kubectl create -f "https://download.elastic.co/downloads/eck/${ECK_VERSION}/crds.yaml"
+  timeout 30 kubectl apply -f "https://download.elastic.co/downloads/eck/${ECK_VERSION}/operator.yaml"
+fi
 
 echo "Waiting for the ECK operator pod to be created..."
 # `kubectl wait` errors immediately with "no matching resources found" if

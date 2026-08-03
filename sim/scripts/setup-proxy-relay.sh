@@ -12,14 +12,30 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # The relay container doesn't exist yet at build time, so its own `apk add`
-# step can't route through it - it has to reach the host's real proxy
-# directly via host.docker.internal, same as the running container does.
-docker build \
-  --add-host=host.docker.internal:host-gateway \
-  --build-arg HTTP_PROXY=http://host.docker.internal:10808 \
-  --build-arg HTTPS_PROXY=http://host.docker.internal:10808 \
-  --build-arg NO_PROXY=localhost,127.0.0.1 \
-  -t kind-proxy-relay:local "$SCRIPT_DIR/proxy-relay"
+# step needs *some* route to the internet - on a machine with a local
+# proxy (e.g. your laptop with v2ray) that's host.docker.internal:10808.
+# On a locked-down server with no outbound proxy at all, don't try to
+# fix that server-wide - instead build this image wherever you do have
+# network access and hand it over as a plain file, no server config
+# touched:
+#   docker save kind-proxy-relay:local | ssh <user>@<server> 'docker load'
+# If the image is already present (built locally or loaded this way),
+# skip the build entirely - this is what makes the script safe to run
+# on a server with no internet access of its own.
+if docker image inspect kind-proxy-relay:local >/dev/null 2>&1; then
+  echo "kind-proxy-relay:local already present, skipping build"
+else
+  # Bounded so a machine with neither internet nor a proxy on 10808 fails
+  # fast and loud instead of hanging - see the block comment above for
+  # the two ways to actually fix that (transfer the image, or run a
+  # proxy on 10808).
+  timeout 120 docker build \
+    --add-host=host.docker.internal:host-gateway \
+    --build-arg HTTP_PROXY=http://host.docker.internal:10808 \
+    --build-arg HTTPS_PROXY=http://host.docker.internal:10808 \
+    --build-arg NO_PROXY=localhost,127.0.0.1 \
+    -t kind-proxy-relay:local "$SCRIPT_DIR/proxy-relay"
+fi
 
 docker rm -f kind-proxy-relay >/dev/null 2>&1 || true
 docker run -d --name kind-proxy-relay \

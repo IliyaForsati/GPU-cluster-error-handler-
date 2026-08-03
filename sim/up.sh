@@ -19,6 +19,7 @@ export no_proxy="${no_proxy:-127.0.0.1,localhost}"
 
 echo "=== 1/5: kind cluster + proxy relay ==="
 bash "$SIM_DIR/scripts/up.sh" "$CLUSTER_NAME"
+bash "$SIM_DIR/scripts/preload-images.sh" "$CLUSTER_NAME"
 
 # The API server is still stabilizing right after node join - RBAC and
 # the OpenAPI schema aren't always ready yet, so even `kubectl wait`
@@ -47,19 +48,32 @@ until [ "$(kubectl -n gpu-sim get kibana gpu-sim-kibana -o jsonpath='{.status.he
 done
 
 echo "=== 3/5: fake-node fleet ==="
-docker build -t fake-node-generator:local "$SIM_DIR/fake-node/"
+# Bounded like the proxy-relay build - if python:3.12-slim isn't already
+# cached locally and there's no internet, fail fast instead of hanging.
+timeout 300 docker build -t fake-node-generator:local "$SIM_DIR/fake-node/"
 kind load docker-image fake-node-generator:local --name "$CLUSTER_NAME"
 kubectl apply -f "$SIM_DIR/k8s/fleet/fluent-bit-configmap.yaml"
 kubectl apply -f "$SIM_DIR/k8s/fleet/fake-node-daemonset.yaml"
 
 echo "=== 4/5: fake-vLLM image ==="
-docker build -t fake-vllm:local "$SIM_DIR/fake-vllm/"
+timeout 300 docker build -t fake-vllm:local "$SIM_DIR/fake-vllm/"
 kind load docker-image fake-vllm:local --name "$CLUSTER_NAME"
 
 echo "=== 5/5: KubeAI ==="
-helm repo add kubeai https://www.kubeai.org >/dev/null 2>&1 || true
-helm repo update >/dev/null
-helm install kubeai kubeai/kubeai -n gpu-sim -f "$SIM_DIR/k8s/kubeai/kubeai-helm-values.yaml" --wait
+# On a server with no outbound internet, drop the chart tarball into
+# k8s/kubeai/vendor/ (untracked - see .gitignore) and this installs
+# straight from it instead of fetching the repo index. Everywhere else,
+# it still pulls the live chart, so this can't go stale by default.
+KUBEAI_CHART="$(ls "$SIM_DIR"/k8s/kubeai/vendor/kubeai-*.tgz 2>/dev/null | head -1)"
+if [ -z "$KUBEAI_CHART" ]; then
+  # Bounded for the same reason as the ECK fetch above - drop a chart
+  # tarball into k8s/kubeai/vendor/ to skip this on a machine with no
+  # internet route to the kubeai repo.
+  timeout 30 helm repo add kubeai https://www.kubeai.org >/dev/null 2>&1 || true
+  timeout 60 helm repo update >/dev/null
+  KUBEAI_CHART="kubeai/kubeai"
+fi
+helm install kubeai "$KUBEAI_CHART" -n gpu-sim -f "$SIM_DIR/k8s/kubeai/kubeai-helm-values.yaml" --wait
 kubectl apply -f "$SIM_DIR/k8s/kubeai/fake-model.yaml"
 
 echo
